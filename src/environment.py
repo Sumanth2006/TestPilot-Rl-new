@@ -20,6 +20,7 @@ class TestingEnvironment:
     Simulated software testing environment with budget constraints,
     code coverage tracking, and defect discovery.
     """
+    __test__ = False
 
     def __init__(
         self,
