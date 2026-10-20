@@ -4,237 +4,224 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Research](https://img.shields.io/badge/Research-Software%20Testing%20RL-green)](.)
 
-> **Q-learning with linear function approximation adaptively prioritizes test cases under budget constraints. It edges out the best greedy baseline on bug detection rate on the synthetic benchmark and on IOF/ROL, but not on PaintControl (see results below).**
+> TestPilot-RL studies whether a reinforcement-learning agent can prioritize software tests under a limited execution budget. Results are mixed across datasets: Q-learning is competitive on the synthetic benchmark and performs best on the reported IOF/ROL metrics, while Greedy Coverage/Cost is the strongest strategy on PaintControl.
 
----
+## Project Overview
 
-## 📋 Project Overview
-
-TestPilot-RL frames software test case prioritization as a **Reinforcement Learning problem**: a Q-learning agent learns to select the best tests to execute within a limited budget, balancing bug detection, code coverage, and execution cost.
+TestPilot-RL frames software test-case prioritization as a reinforcement-learning problem. The agent learns which test to execute next while balancing bug discovery, coverage, and execution cost. It is evaluated against Random, Greedy Coverage/Cost, and Greedy Failure/Cost strategies.
 
 ### Key Features
 
-- **Linear Function Approximation Q-Learning** with per-test observable feature vectors
-- **Prioritized Experience Replay (PER)** for efficient learning from high-value transitions
-- **Double Q-Learning** to reduce overestimation bias
-- **Reward Shaping** toward failure-rate oracle, annealed during training
-- **Legal Action Masking** — no test is ever run twice, no budget violation
-- **Real-world evaluation** on 2 ABB industrial CI datasets (PaintControl & IOF/ROL)
+- Linear Q-learning with per-test observable feature vectors
+- Prioritized Experience Replay (PER)
+- Double Q-learning
+- Reward shaping during training
+- Legal action masking to avoid rerunning tests and exceeding the available budget
+- Synthetic benchmark and two real-world continuous-integration datasets: PaintControl and IOF/ROL
+- Experiment runner for baseline comparisons, budget sensitivity, reward ablation, and agent ablation
 
----
+## Latest Experimental Results
 
-## 📊 Results
+The tables below reflect the committed summary CSVs. BDR means bug detection rate; APFD measures how early faults are detected, with higher values generally preferred. Values are means across the reported evaluations. The CSV files also contain standard deviations and 95% confidence-interval half-widths.
 
-### Synthetic Benchmark (120 held-out builds × 3 seeds = 360 evaluations)
+### Synthetic benchmark
 
-| Strategy | BDR ↑ | APFD ↑ | Bugs/Cost ↑ | Coverage |
-|---|---|---|---|---|
-| **Q-Learning (ours)** | **0.810** 🥇 | 0.482 | **0.134** 🥇 | 0.980 |
-| Greedy (Failure/Cost) | 0.802 | **0.492** 🥇 | 0.132 | 0.976 |
-| Greedy (Coverage/Cost) | 0.698 | 0.398 | 0.112 | **0.998** |
-| Random | 0.680 | 0.366 | 0.109 | 0.954 |
+120 held-out builds × 3 seeds = 360 evaluations.
 
-> **Q-Learning beats Greedy (Failure/Cost) on Bug Detection Rate (+0.8pp) and Bugs/Cost (+1.7%), but Greedy (Failure/Cost) has slightly higher APFD. The BDR gap is small relative to the std (~0.15).**
+| Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage ↑ |
+|---|---:|---:|---:|---:|
+| Random | 0.6795 | 0.3663 | 0.1093 | 0.9537 |
+| Greedy (Coverage/Cost) | 0.6977 | 0.3983 | 0.1125 | **0.9979** |
+| Greedy (Failure/Cost) | 0.8018 | **0.4915** | **0.1318** | 0.9757 |
+| Q-Learning | **0.8044** | 0.4681 | 0.1317 | 0.9951 |
 
-### Real-World CI: IOF/ROL Industrial Dataset (63 held-out CI cycles with defects)
+**Interpretation:** Q-learning's BDR is slightly higher than Greedy Failure/Cost (0.8044 vs. 0.8018, a 0.26 percentage-point difference). Greedy Failure/Cost has higher APFD and a marginally higher bugs-per-cost mean. These aggregate results do not establish that the BDR difference is statistically significant.
 
-| Strategy | BDR ↑ | APFD ↑ | Coverage |
-|---|---|---|---|
-| **Q-Learning (ours)** | **0.576** 🥇 | **0.269** 🥇 | 0.874 |
-| Greedy (Failure/Cost) | 0.532 | 0.244 | 0.873 |
-| Greedy (Coverage/Cost) | 0.499 | 0.239 | **0.924** |
-| Random | 0.474 | 0.222 | 0.849 |
+### Real-world CI: PaintControl
 
-> **Q-Learning beats all baselines on the IOF/ROL industrial dataset (+4.5pp BDR over the best greedy, 0.576 vs 0.532).**
+207 evaluations in the generated summary.
 
-### Real-World CI: Paint Control Industrial Dataset (69 held-out CI cycles with defects)
+| Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage ↑ |
+|---|---:|---:|---:|---:|
+| Random | 0.4603 | 0.2275 | 0.0244 | 0.9414 |
+| Greedy (Coverage/Cost) | **0.6946** | **0.3564** | **0.0395** | **0.9865** |
+| Greedy (Failure/Cost) | 0.4177 | 0.1657 | 0.0371 | 0.9816 |
+| Q-Learning | 0.4297 | 0.1643 | 0.0382 | 0.9845 |
 
-| Strategy | BDR ↑ | APFD ↑ | Coverage |
-|---|---|---|---|
-| Greedy (Coverage/Cost) | **0.686** 🥇 | **0.337** 🥇 | **0.990** |
-| Random | 0.460 | 0.228 | 0.958 |
-| Q-Learning (ours) | 0.456 | 0.181 | 0.965 |
-| Greedy (Failure/Cost) | 0.418 | 0.166 | 0.973 |
+**Interpretation:** Greedy Coverage/Cost is the strongest strategy on PaintControl for BDR and APFD. Q-learning is below Random on BDR and APFD in this evaluation. This is a key limitation and a target for further investigation; the results alone do not establish why the gap occurs.
 
-> On PaintControl, failure-rate history is weakly predictive (sparse/volatile failures), so coverage-greedy wins. Q-Learning beats Greedy (Failure/Cost) (0.456 vs 0.418) but is on par with Random (0.460) on BDR and below it on APFD.
+### Real-world CI: IOF/ROL
 
-### Agent Ablation: Linear vs Tabular Q-Learning
+189 evaluations in the generated summary.
 
-| Agent | BDR ↑ | APFD ↑ |
-|---|---|---|
-| **Linear Q-Learning (ours)** | **0.820** 🥇 | **0.484** 🥇 |
-| Tabular Q-Learning (legacy) | 0.802 | 0.427 |
+| Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage ↑ |
+|---|---:|---:|---:|---:|
+| Random | 0.4743 | 0.2217 | 0.0998 | 0.8490 |
+| Greedy (Coverage/Cost) | 0.4984 | 0.2289 | 0.1016 | **0.9175** |
+| Greedy (Failure/Cost) | 0.5315 | 0.2437 | 0.1226 | 0.8635 |
+| Q-Learning | **0.5785** | **0.2719** | **0.1319** | 0.8910 |
 
-> Linear function approximation improves BDR by **+1.8pp** and APFD by **+5.7pp** over the tabular baseline.
+**Interpretation:** Q-learning has the highest reported BDR, APFD, and bugs-per-cost mean on IOF/ROL. Greedy Coverage/Cost has the highest coverage mean. Statistical significance should be assessed with an appropriate paired analysis before making stronger claims.
 
----
+### Agent ablation: linear vs. tabular Q-learning
 
-## 🏗️ Architecture
+The committed `agent_ablation.csv` contains per-build rows for 60 held-out builds per variant. The means below are calculated from those rows.
 
-```
+| Agent | BDR ↑ | APFD ↑ | Bugs/cost ↑ |
+|---|---:|---:|---:|
+| Linear Q-Learning | **0.8124** | **0.4794** | **0.1311** |
+| Tabular Q-Learning (legacy) | 0.7880 | 0.4468 | 0.1263 |
+
+**Interpretation:** In this ablation output, the linear agent has higher mean BDR, APFD, and bugs-per-cost than the tabular variant. Treat this as an observed result for this evaluation setup, not proof of universal superiority.
+
+## Architecture
+
+```text
 TestPilot-RL/
-├── data/                      # Downloaded real-world CI datasets
-│   ├── paintcontrol.csv       # ABB Paint Control (352 CI cycles)
-│   └── iofrol.csv             # ABB IOF/ROL (320 CI cycles)
+├── data/                       # Real-world CI datasets (downloaded separately)
 ├── src/
-│   ├── q_learning.py          # LinearQLearningAgent (primary) + TabularQLearningAgent
-│   ├── environment.py         # Gym-like RL environment with budget masking
-│   ├── simulator.py           # Synthetic build generator + RealWorldCIAdapter
-│   ├── baselines.py           # Random, Greedy (Coverage/Cost), Greedy (Failure/Cost)
-│   ├── train.py               # Training pipeline with PER and epsilon decay
-│   ├── evaluate.py            # Multi-seed evaluation framework
-│   ├── run_experiments.py     # Master experiment runner (7 experiments)
-│   ├── metrics.py             # BDR, APFD, coverage, efficiency metrics
-│   └── data_loader.py         # Dataset download and parsing
+│   ├── q_learning.py            # Linear and tabular Q-learning agents
+│   ├── environment.py           # RL environment and budget/action constraints
+│   ├── simulator.py             # Synthetic builds and real-world CI adapter
+│   ├── baselines.py              # Random and greedy baselines
+│   ├── train.py                  # Training pipeline
+│   ├── evaluate.py               # Evaluation framework
+│   ├── run_experiments.py        # Master experiment runner
+│   ├── metrics.py                # Evaluation metrics
+│   └── data_loader.py            # Dataset loading and parsing
 ├── models/
-│   └── q_table.npy            # Trained model checkpoint
+│   ├── q_table.npy               # Saved model artifact
+│   └── synthetic_model.npy       # Synthetic training model artifact
 ├── results/
-│   ├── summary.csv            # Synthetic benchmark results
+│   ├── summary.csv
 │   ├── real_world_paintcontrol_summary.csv
 │   ├── real_world_iofrol_summary.csv
 │   ├── training_history.csv
+│   ├── synthetic_training_history.csv
 │   ├── budget_sensitivity.csv
 │   ├── reward_ablation.csv
 │   ├── agent_ablation.csv
-│   ├── *_raw.csv              # Per-evaluation raw results
-│   └── figures/               # All publication-ready plots
+│   ├── *_raw.csv                 # Per-evaluation outputs
+│   └── figures/                  # Generated experiment figures
 └── tests/
-    ├── test_environment.py    # Environment unit tests
-    └── test_q_learning.py     # Agent unit tests (12 tests total)
 ```
 
----
+## Reinforcement-Learning Formulation
 
-## 🧠 The RL Formulation
+### State
 
-### State Space
-Compact 3-tuple: `(budget_bin, coverage_bin, history_bin)` → 75 discrete states
+The project README's compact state description is `(budget_bin, coverage_bin, history_bin)`, with 75 discrete states.
 
-### Action Space
-Select one unexecuted test `t ∈ {0, ..., N-1}` with `cost(t) ≤ remaining_budget`
+### Actions
 
-### Feature Vector (per-test, observable at selection time)
-```
-φ(s, a) = [
-  fail_rate(a),          # historical failure rate of test a
-  fail_rate(a) / cost,   # core greedy signal — normalized
-  new_coverage / total,  # marginal feature coverage gain
-  new_coverage / cost,   # coverage efficiency
-  cost / remaining_budget,  # affordability ratio
-  remaining_budget / total_budget,  # budget pressure
-  covered_features / total_features,  # episode progress
-  recent_bug_momentum,   # 1 if last 3 tests found bugs
-]
-```
+Select an unexecuted test that can be run within the remaining budget. Legal-action masking prevents selecting a test more than once or exceeding the budget.
 
-### Q-Function
-```
-Q(s, a) = w · φ(s, a)    (linear function approximation)
-```
-Learned via semi-gradient Q-learning with PER batch updates.
+### Per-test feature vector
 
-### Reward Function
-```
-r_t = w_b · B_t + w_c · C_t − w_e · E_t
-```
-Where:
-- `B_t` = new bugs found at step t
-- `C_t` = new features covered / total features
-- `E_t` = execution cost / total budget
-- Weights: `w_b=3.0, w_c=0.8, w_e=0.2`
+The linear agent uses observable signals associated with each candidate test, including:
 
----
-
-## 🚀 Quick Start
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
+```text
+fail_rate(test)
+fail_rate(test) / cost(test)
+marginal_coverage_gain / total_features
+marginal_coverage_gain / cost(test)
+cost(test) / remaining_budget
+remaining_budget / total_budget
+covered_features / total_features
+recent_bug_momentum
 ```
 
-### 2. Run All Experiments (reproduces all results)
-```bash
-python -m src.run_experiments
-```
-This runs 7 experiments (~15-20 minutes):
-1. Training curve
-2. Synthetic baseline comparison
-3. Budget sensitivity analysis
-4. Reward function ablation
-5. Agent ablation (Linear vs Tabular)
-6. Real-world PaintControl evaluation
-7. Real-world IOF/ROL evaluation
+The linear Q-function is represented as:
 
-### 3. Train Only
-```bash
-# Train linear agent on synthetic data
-python -m src.train --episodes 2000 --dataset synthetic
-
-# Train on real-world Paint Control dataset
-python -m src.train --episodes 1500 --dataset paintcontrol
-
-# Train on IOF/ROL dataset
-python -m src.train --episodes 1500 --dataset iofrol
+```text
+Q(s, a) = w · φ(s, a)
 ```
 
-### 4. Evaluate Only
-```bash
-python -m src.evaluate --dataset synthetic --num_test_builds 120
+The training implementation uses Q-learning updates and prioritized replay. See `src/q_learning.py` and `src/train.py` for the implementation details and current parameter values.
+
+### Reward
+
+The intended reward balances newly detected bugs, coverage gain, and execution cost. The exact implementation and any reward-shaping terms are defined in the training/environment code; consult those files when reproducing or modifying the objective.
+
+## Quick Start
+
+Run these commands from the repository root.
+
+### 1. Create and activate a virtual environment (recommended)
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 5. Run Unit Tests
-```bash
+Then install dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+### 2. Run the test suite
+
+```powershell
 python -m pytest tests/ -v
 ```
 
----
+### 3. Run all experiments
 
-## 📈 Key Experimental Findings
+```powershell
+python -m src.run_experiments
+```
 
-### Finding 1: Linear FA beats Tabular Q-Learning
-The tabular agent can't generalize: action ID `5` on build A means something different than action ID `5` on build B. The linear agent encodes per-test *observable signals* (fail_rate/cost, coverage efficiency) that transfer across all builds.
+The experiment runner executes the configured training and evaluation stages, including synthetic baseline comparison, budget sensitivity, reward ablation, agent ablation, and real-world PaintControl and IOF/ROL evaluations. Runtime depends on the machine and configuration.
 
-### Finding 2: Q-Learning beats Greedy on Synthetic (+0.8pp BDR)
-By learning from 2000 episodes with reward shaping, the agent internalizes the failure-rate/cost scoring of the greedy heuristic and adds budget-awareness, coverage momentum, and recency — producing higher bug detection under the same budget.
+### 4. Train a model separately
 
-### Finding 3: Q-Learning beats ALL baselines on IOF/ROL (+4.5pp BDR)
-On the IOF/ROL industrial dataset (0.576 vs 0.532 for the best greedy), the agent's ability to generalize via feature vectors is most visible — it surpasses both greedy strategies and Random.
+```powershell
+# Synthetic benchmark
+python -m src.train --episodes 2000 --dataset synthetic
 
-### Finding 4: PaintControl favors Coverage Greedy
-When failure history is sparse or volatile (PaintControl has highly variable verdicts per cycle), coverage-per-cost dominates. Q-Learning beats Greedy (Failure/Cost) here but does not beat Random on BDR (0.456 vs 0.460).
+# PaintControl
+python -m src.train --episodes 1500 --dataset paintcontrol
 
-### Finding 5: Budget Sensitivity (synthetic, BDR)
+# IOF/ROL
+python -m src.train --episodes 1500 --dataset iofrol
+```
 
-| Budget | Random | Greedy (Cov/Cost) | Greedy (Fail/Cost) | Q-Learning |
-|---|---|---|---|---|
-| 20% | 0.384 | 0.455 | **0.550** | 0.540 |
-| 35% | 0.604 | 0.609 | 0.710 | **0.721** |
-| 50% | 0.776 | 0.738 | 0.829 | **0.842** |
-| 65% | 0.841 | 0.848 | **0.902** | 0.891 |
-| 80% | 0.936 | **0.945** | 0.938 | 0.938 |
+### 5. Evaluate separately
 
-Q-Learning is not uniformly better. It wins at 35% and 50% budgets, loses narrowly to Greedy (Failure/Cost) at 20% and 65%, and ties it at 80% (where all strategies converge and Greedy (Coverage/Cost) is marginally highest).
+```powershell
+python -m src.evaluate --dataset synthetic --num_test_builds 120
+```
 
-### Finding 6: Reward weights barely matter
-The three reward-function variants (Balanced, Bug-Centric, Coverage-Centric) all reach BDR 0.817–0.821, so on this benchmark the result is insensitive to the reward weights. The shaping term toward the failure-rate oracle likely dominates the learned policy. This is a genuine result, not a bug.
+Check each command's `--help` output if options differ in your checked-out version:
 
----
+```powershell
+python -m src.train --help
+python -m src.evaluate --help
+python -m src.run_experiments --help
+```
 
-## 📚 Datasets
+## Key Findings and Limitations
 
-### ABB Paint Control (`paintcontrol.csv`)
-- **Source**: [RETECS by Spieker et al. (ISSTA 2017)](https://github.com/mregorova/RETECS)
-- **Size**: 352 CI cycles in the raw file (89 unique test names)
-- **Split**: only cycles with at least one defect are used: 159 train / 69 test (70/30 split)
-- **Description**: Real ABB industrial CI test results, paint control software system
+1. **Results vary by dataset.** Q-learning is competitive on synthetic data, leads on the reported IOF/ROL BDR/APFD/bugs-per-cost metrics, and underperforms Greedy Coverage/Cost on PaintControl BDR and APFD.
+2. **Coverage and fault detection are not interchangeable.** A strategy can achieve high coverage without detecting faults as early or as frequently as another strategy.
+3. **The synthetic BDR margin is small.** Q-learning's mean BDR is 0.8044 compared with 0.8018 for Greedy Failure/Cost; avoid presenting this as a decisive win without statistical testing.
+4. **More robust statistical analysis is needed.** Where policies are evaluated on shared builds or seeds, use paired comparisons and report uncertainty rather than relying only on aggregate means.
+5. **PaintControl needs further investigation.** Inspect the data split, observable features, reward, evaluation procedure, and generalization before attributing the result to a specific cause.
 
-### ABB IOF/ROL (`iofrol.csv`)
-- **Source**: [RETECS by Spieker et al. (ISSTA 2017)](https://github.com/mregorova/RETECS)
-- **Size**: 320 CI cycles in the raw file (1941 unique test names)
-- **Split**: only cycles with at least one defect are used: 145 train / 63 test (70/30 split)
-- **Description**: Real ABB industrial CI test results, IOF/ROL control system
+## Datasets
 
-### Citation
+The project uses the ABB Paint Control and IOF/ROL continuous-integration datasets from the RETECS work.
+
+- **Source repository:** [RETECS](https://github.com/mregorova/RETECS)
+- **Paper:** Spieker, H., Gotlieb, A., Marijan, D., and Mossige, M. (2017). *Reinforcement learning for automatic test case prioritization and selection in continuous integration.* Proceedings of the 26th ACM SIGSOFT International Symposium on Software Testing and Analysis, pp. 12–22.
+
+The README's earlier dataset description reports 352 raw PaintControl cycles and 320 raw IOF/ROL cycles. The real-world summary files report 207 and 189 evaluations respectively; these are evaluation counts, not raw dataset sizes.
+
+### BibTeX
+
 ```bibtex
 @inproceedings{spieker2017reinforcement,
   title={Reinforcement learning for automatic test case prioritization and selection in continuous integration},
@@ -245,35 +232,22 @@ The three reward-function variants (Balanced, Bug-Centric, Coverage-Centric) all
 }
 ```
 
----
+## Results and Reproducibility
 
-## ⚙️ Hyperparameters
+- Summary tables: `results/summary.csv`, `results/real_world_paintcontrol_summary.csv`, and `results/real_world_iofrol_summary.csv`
+- Per-evaluation outputs: `results/*_raw.csv`
+- Training history: `results/training_history.csv` and `results/synthetic_training_history.csv`
+- Ablation and sensitivity outputs: `results/agent_ablation.csv`, `results/reward_ablation.csv`, and `results/budget_sensitivity.csv`
+- Figures: `results/figures/`
 
-| Parameter | Value | Description |
-|---|---|---|
-| `alpha` | 0.008 | Learning rate |
-| `gamma` | 0.97 | Discount factor |
-| `epsilon_start` | 1.0 | Initial exploration rate |
-| `epsilon_min` | 0.02 | Minimum exploration rate |
-| `epsilon_decay` | 0.997 | Per-episode epsilon decay |
-| `batch_size` | 64 | PER mini-batch size |
-| `replay_capacity` | 30,000 | Replay buffer size |
-| `shaping_coef` | 2.5 | Reward shaping coefficient |
-| `target_update_freq` | 200 | Target network sync frequency |
-| `episodes` (synthetic) | 2,000 | Training episodes |
-| `episodes` (real-world) | 1,500 | Training episodes |
-| `budget_ratio` | 0.45 | Testing budget (45% of full suite cost) |
+For a reproducible comparison, keep the code version, dataset version, seeds, command-line options, and generated outputs together. Re-running the experiment runner may overwrite result files, so back up outputs you want to preserve.
 
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE).
-
----
-
-## 🔗 References
+## References
 
 - Spieker et al. (2017). *Reinforcement learning for automatic test case prioritization and selection in continuous integration.* ISSTA 2017.
 - Mnih et al. (2015). *Human-level control through deep reinforcement learning.* Nature.
 - Schaul et al. (2016). *Prioritized experience replay.* ICLR 2016.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
