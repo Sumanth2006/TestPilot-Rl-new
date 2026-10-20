@@ -20,5 +20,9 @@ Thumbs.db
 *.tar.gz
 *.zip
 data/*.csv
-!data/sample_*.json
 data/raw/
+
+# ad-hoc train/evaluate runs
+results/scratch/
+models/scratch_model.npy
+__pycache__/

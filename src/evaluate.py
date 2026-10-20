@@ -113,11 +113,11 @@ def run_benchmark_comparison(
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate TestPilot-RL vs Baselines")
-    parser.add_argument("--model_path", type=str, default="models/q_table.npy")
+    parser.add_argument("--model_path", type=str, default="models/scratch_model.npy")
     parser.add_argument("--num_test_builds", type=int, default=120)
     parser.add_argument("--dataset", type=str, default="synthetic", choices=["synthetic", "paintcontrol", "iofrol"])
-    parser.add_argument("--raw_output", type=str, default="results/raw_results.csv")
-    parser.add_argument("--summary_output", type=str, default="results/summary.csv")
+    parser.add_argument("--raw_output", type=str, default="results/scratch/raw_results.csv")
+    parser.add_argument("--summary_output", type=str, default="results/scratch/summary.csv")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -146,6 +146,7 @@ def main():
     raw_df = run_benchmark_comparison(agent, test_builds, seeds=[42, 101, 777], test_history=test_history)
     summary_df = aggregate_experiment_results(raw_df)
 
+    os.makedirs(os.path.dirname(args.raw_output) or ".", exist_ok=True)
     raw_df.to_csv(args.raw_output, index=False)
     summary_df.to_csv(args.summary_output, index=False)
 

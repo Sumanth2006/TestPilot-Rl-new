@@ -161,8 +161,8 @@ def main():
     parser.add_argument("--episodes", type=int, default=2000, help="Number of training episodes")
     parser.add_argument("--dataset", type=str, default="synthetic", choices=["synthetic", "paintcontrol", "iofrol"])
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--save_path", type=str, default="models/q_table.npy", help="Path to save model")
-    parser.add_argument("--history_path", type=str, default="results/training_history.csv")
+    parser.add_argument("--save_path", type=str, default="models/scratch_model.npy", help="Path to save model")
+    parser.add_argument("--history_path", type=str, default="results/scratch/training_history.csv")
     parser.add_argument("--tabular", action="store_true", help="Use legacy tabular agent instead")
     args = parser.parse_args()
 
@@ -202,6 +202,7 @@ def main():
     )
 
     agent.save(args.save_path)
+    os.makedirs(os.path.dirname(args.history_path) or ".", exist_ok=True)
     history_df.to_csv(args.history_path, index=False)
     print(f"Training complete. Model saved to {args.save_path}.")
 

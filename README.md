@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Research](https://img.shields.io/badge/Research-Software%20Testing%20RL-green)](.)
 
-> **Q-learning with linear function approximation adaptively prioritizes test cases under budget constraints — outperforming greedy baselines on bug detection rate in both synthetic and real-world CI benchmarks.**
+> **Q-learning with linear function approximation adaptively prioritizes test cases under budget constraints. It edges out the best greedy baseline on bug detection rate on the synthetic benchmark and on IOF/ROL, but not on PaintControl (see results below).**
 
 ---
 
@@ -29,43 +29,43 @@ TestPilot-RL frames software test case prioritization as a **Reinforcement Learn
 
 | Strategy | BDR ↑ | APFD ↑ | Bugs/Cost ↑ | Coverage |
 |---|---|---|---|---|
-| **Q-Learning (ours)** | **0.810** 🥇 | 0.483 | **0.134** 🥇 | 0.980 |
-| Greedy (Failure/Cost) | 0.802 | **0.491** 🥇 | 0.132 | 0.976 |
-| Greedy (Coverage/Cost) | 0.698 | 0.398 | 0.113 | **0.998** |
+| **Q-Learning (ours)** | **0.810** 🥇 | 0.482 | **0.134** 🥇 | 0.980 |
+| Greedy (Failure/Cost) | 0.802 | **0.492** 🥇 | 0.132 | 0.976 |
+| Greedy (Coverage/Cost) | 0.698 | 0.398 | 0.112 | **0.998** |
 | Random | 0.680 | 0.366 | 0.109 | 0.954 |
 
-> **Q-Learning beats Greedy (Failure/Cost) on Bug Detection Rate (+0.8pp) and Bugs/Cost (+1.7%).**
+> **Q-Learning beats Greedy (Failure/Cost) on Bug Detection Rate (+0.8pp) and Bugs/Cost (+1.7%), but Greedy (Failure/Cost) has slightly higher APFD. The BDR gap is small relative to the std (~0.15).**
 
-### Real-World CI: IOF/ROL Industrial Dataset (63 held-out CI cycles)
-
-| Strategy | BDR ↑ | APFD ↑ | Coverage |
-|---|---|---|---|
-| **Q-Learning (ours)** | **0.579** 🥇 | **0.268** 🥇 | 0.896 |
-| Greedy (Failure/Cost) | 0.532 | 0.244 | 0.897 |
-| Greedy (Coverage/Cost) | 0.511 | 0.239 | **0.937** |
-| Random | 0.474 | 0.222 | 0.873 |
-
-> **Q-Learning beats all baselines on the IOF/ROL industrial dataset (+4.7pp BDR over best greedy).**
-
-### Real-World CI: Paint Control Industrial Dataset (69 held-out CI cycles)
+### Real-World CI: IOF/ROL Industrial Dataset (63 held-out CI cycles with defects)
 
 | Strategy | BDR ↑ | APFD ↑ | Coverage |
 |---|---|---|---|
-| Greedy (Coverage/Cost) | **0.717** 🥇 | **0.374** 🥇 | **0.983** |
-| **Q-Learning (ours)** | **0.456** | 0.181 | 0.964 |
-| Random | 0.460 | 0.228 | 0.935 |
-| Greedy (Failure/Cost) | 0.418 | 0.166 | 0.961 |
+| **Q-Learning (ours)** | **0.576** 🥇 | **0.269** 🥇 | 0.874 |
+| Greedy (Failure/Cost) | 0.532 | 0.244 | 0.873 |
+| Greedy (Coverage/Cost) | 0.499 | 0.239 | **0.924** |
+| Random | 0.474 | 0.222 | 0.849 |
 
-> On PaintControl, failure-rate history is weakly predictive (sparse/volatile failures), so coverage-greedy wins. Q-Learning still outperforms Greedy (Failure/Cost).
+> **Q-Learning beats all baselines on the IOF/ROL industrial dataset (+4.5pp BDR over the best greedy, 0.576 vs 0.532).**
+
+### Real-World CI: Paint Control Industrial Dataset (69 held-out CI cycles with defects)
+
+| Strategy | BDR ↑ | APFD ↑ | Coverage |
+|---|---|---|---|
+| Greedy (Coverage/Cost) | **0.686** 🥇 | **0.337** 🥇 | **0.990** |
+| Random | 0.460 | 0.228 | 0.958 |
+| Q-Learning (ours) | 0.456 | 0.181 | 0.965 |
+| Greedy (Failure/Cost) | 0.418 | 0.166 | 0.973 |
+
+> On PaintControl, failure-rate history is weakly predictive (sparse/volatile failures), so coverage-greedy wins. Q-Learning beats Greedy (Failure/Cost) (0.456 vs 0.418) but is on par with Random (0.460) on BDR and below it on APFD.
 
 ### Agent Ablation: Linear vs Tabular Q-Learning
 
 | Agent | BDR ↑ | APFD ↑ |
 |---|---|---|
-| **Linear Q-Learning (ours)** | **0.820** 🥇 | **0.483** 🥇 |
+| **Linear Q-Learning (ours)** | **0.820** 🥇 | **0.484** 🥇 |
 | Tabular Q-Learning (legacy) | 0.802 | 0.427 |
 
-> Linear function approximation improves BDR by **+1.8pp** and APFD by **+5.6pp** over the tabular baseline.
+> Linear function approximation improves BDR by **+1.8pp** and APFD by **+5.7pp** over the tabular baseline.
 
 ---
 
@@ -73,11 +73,9 @@ TestPilot-RL frames software test case prioritization as a **Reinforcement Learn
 
 ```
 TestPilot-RL/
-├── configs/
-│   └── experiment.json        # Hyperparameter configuration
 ├── data/                      # Downloaded real-world CI datasets
-│   ├── paintcontrol.csv       # ABB Paint Control (352 CI cycles, 114 tests)
-│   └── iofrol.csv             # ABB IOF/ROL (312 CI cycles, 2086 tests)
+│   ├── paintcontrol.csv       # ABB Paint Control (352 CI cycles)
+│   └── iofrol.csv             # ABB IOF/ROL (320 CI cycles)
 ├── src/
 │   ├── q_learning.py          # LinearQLearningAgent (primary) + TabularQLearningAgent
 │   ├── environment.py         # Gym-like RL environment with budget masking
@@ -98,9 +96,11 @@ TestPilot-RL/
 │   ├── budget_sensitivity.csv
 │   ├── reward_ablation.csv
 │   ├── agent_ablation.csv
+│   ├── *_raw.csv              # Per-evaluation raw results
 │   └── figures/               # All publication-ready plots
 └── tests/
-    └── test_environment.py    # Unit tests
+    ├── test_environment.py    # Environment unit tests
+    └── test_q_learning.py     # Agent unit tests (12 tests total)
 ```
 
 ---
@@ -197,14 +197,26 @@ The tabular agent can't generalize: action ID `5` on build A means something dif
 ### Finding 2: Q-Learning beats Greedy on Synthetic (+0.8pp BDR)
 By learning from 2000 episodes with reward shaping, the agent internalizes the failure-rate/cost scoring of the greedy heuristic and adds budget-awareness, coverage momentum, and recency — producing higher bug detection under the same budget.
 
-### Finding 3: Q-Learning beats ALL baselines on IOF/ROL (+4.7pp BDR)
-On the IOF/ROL industrial dataset with 2000+ tests, the agent's ability to generalize via feature vectors is most visible — it surpasses both greedy strategies.
+### Finding 3: Q-Learning beats ALL baselines on IOF/ROL (+4.5pp BDR)
+On the IOF/ROL industrial dataset (0.576 vs 0.532 for the best greedy), the agent's ability to generalize via feature vectors is most visible — it surpasses both greedy strategies and Random.
 
 ### Finding 4: PaintControl favors Coverage Greedy
-When failure history is sparse or volatile (PaintControl has highly variable verdicts per cycle), coverage-per-cost dominates. Q-Learning still outperforms Greedy (Failure/Cost) here.
+When failure history is sparse or volatile (PaintControl has highly variable verdicts per cycle), coverage-per-cost dominates. Q-Learning beats Greedy (Failure/Cost) here but does not beat Random on BDR (0.456 vs 0.460).
 
-### Finding 5: Budget Sensitivity
-Q-Learning maintains its advantage across all budget ratios (20%–80%), with the largest gains at medium budgets (35%–65%) where exploration-exploitation tradeoff matters most.
+### Finding 5: Budget Sensitivity (synthetic, BDR)
+
+| Budget | Random | Greedy (Cov/Cost) | Greedy (Fail/Cost) | Q-Learning |
+|---|---|---|---|---|
+| 20% | 0.384 | 0.455 | **0.550** | 0.540 |
+| 35% | 0.604 | 0.609 | 0.710 | **0.721** |
+| 50% | 0.776 | 0.738 | 0.829 | **0.842** |
+| 65% | 0.841 | 0.848 | **0.902** | 0.891 |
+| 80% | 0.936 | **0.945** | 0.938 | 0.938 |
+
+Q-Learning is not uniformly better. It wins at 35% and 50% budgets, loses narrowly to Greedy (Failure/Cost) at 20% and 65%, and ties it at 80% (where all strategies converge and Greedy (Coverage/Cost) is marginally highest).
+
+### Finding 6: Reward weights barely matter
+The three reward-function variants (Balanced, Bug-Centric, Coverage-Centric) all reach BDR 0.817–0.821, so on this benchmark the result is insensitive to the reward weights. The shaping term toward the failure-rate oracle likely dominates the learned policy. This is a genuine result, not a bug.
 
 ---
 
@@ -212,14 +224,14 @@ Q-Learning maintains its advantage across all budget ratios (20%–80%), with th
 
 ### ABB Paint Control (`paintcontrol.csv`)
 - **Source**: [RETECS by Spieker et al. (ISSTA 2017)](https://github.com/mregorova/RETECS)
-- **Size**: 352 CI cycles, 114 test cases
-- **Split**: 70% train (246 cycles), 30% test (106 cycles)
+- **Size**: 352 CI cycles in the raw file (89 unique test names)
+- **Split**: only cycles with at least one defect are used: 159 train / 69 test (70/30 split)
 - **Description**: Real ABB industrial CI test results, paint control software system
 
 ### ABB IOF/ROL (`iofrol.csv`)
 - **Source**: [RETECS by Spieker et al. (ISSTA 2017)](https://github.com/mregorova/RETECS)
-- **Size**: 320 CI cycles, 2086 test cases
-- **Split**: 70% train (224 cycles), 30% test (96 cycles)
+- **Size**: 320 CI cycles in the raw file (1941 unique test names)
+- **Split**: only cycles with at least one defect are used: 145 train / 63 test (70/30 split)
 - **Description**: Real ABB industrial CI test results, IOF/ROL control system
 
 ### Citation
