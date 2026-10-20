@@ -4,7 +4,7 @@
 
 TestPilot-RL frames test-case prioritization as a reinforcement-learning problem. A Q-learning agent learns which tests to execute under a limited testing budget, balancing bug detection, feature coverage, and execution cost.
 
-> **Result summary:** Performance depends on the dataset. Q-learning is slightly ahead of the best greedy baseline on the synthetic benchmark, performs best on IOF/ROL, and does **not** outperform the coverage-per-cost greedy baseline (or Random) on PaintControl. These results are not a universal win for reinforcement learning.
+> **Result summary:** Performance depends on the dataset. Q-learning has a very small BDR edge over the best greedy baseline on the synthetic benchmark, performs best on several IOF/ROL metrics, and does **not** outperform the coverage-per-cost greedy baseline or Random on PaintControl BDR and APFD. These results are not a universal win for reinforcement learning.
 
 ## Project overview
 
@@ -28,12 +28,12 @@ All values are computed from the generated CSVs in `results/` (one seed/config; 
 
 | Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage |
 |---|---:|---:|---:|---:|
-| Q-learning (linear) | 0.8099 | 0.4825 | 0.1341 | 0.9799 |
+| Q-learning (linear) | 0.8044 | 0.4681 | 0.1317 | 0.9951 |
 | Greedy (failure/cost) | 0.8018 | 0.4915 | 0.1318 | 0.9757 |
 | Greedy (coverage/cost) | 0.6977 | 0.3983 | 0.1125 | 0.9979 |
 | Random | 0.6795 | 0.3663 | 0.1093 | 0.9537 |
 
-**Interpretation:** Q-learning has the highest BDR (+0.8 pp over greedy failure/cost) and bugs/cost, while greedy failure/cost has higher APFD. The BDR gap is small compared with the standard deviation across builds (about 0.15), so it should not be read as a decisive win.
+**Interpretation:** Q-learning has the highest BDR by only 0.26 percentage points over greedy failure/cost. Greedy failure/cost has slightly higher APFD and bugs/cost, while Q-learning has higher coverage. The BDR difference is small and should not be read as a decisive win.
 
 ### Real-world CI: IOF/ROL
 
@@ -41,12 +41,12 @@ All values are computed from the generated CSVs in `results/` (one seed/config; 
 
 | Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage |
 |---|---:|---:|---:|---:|
-| Q-learning (linear) | 0.5762 | 0.2692 | 0.1302 | 0.8741 |
+| Q-learning (linear) | 0.5785 | 0.2719 | 0.1319 | 0.8910 |
 | Greedy (failure/cost) | 0.5315 | 0.2437 | 0.1226 | 0.8730 |
-| Greedy (coverage/cost) | 0.4988 | 0.2389 | 0.1028 | 0.9238 |
+| Greedy (coverage/cost) | 0.4984 | 0.2289 | 0.1016 | 0.9175 |
 | Random | 0.4743 | 0.2217 | 0.0998 | 0.8487 |
 
-**Interpretation:** Q-learning leads on BDR (+4.5 pp over greedy failure/cost), APFD, and bugs/cost. Greedy coverage/cost has the highest coverage. These are descriptive means; no significance test has been run.
+**Interpretation:** Q-learning leads on BDR (+4.7 percentage points over greedy failure/cost), APFD, and bugs/cost. Greedy coverage/cost has the highest coverage. These are descriptive means; no significance test has been run.
 
 ### Real-world CI: PaintControl
 
@@ -54,34 +54,34 @@ All values are computed from the generated CSVs in `results/` (one seed/config; 
 
 | Strategy | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage |
 |---|---:|---:|---:|---:|
-| Greedy (coverage/cost) | 0.6860 | 0.3371 | 0.0387 | 0.9903 |
+| Greedy (coverage/cost) | 0.6946 | 0.3564 | 0.0395 | 0.9865 |
 | Random | 0.4603 | 0.2275 | 0.0244 | 0.9578 |
-| Q-learning (linear) | 0.4563 | 0.1813 | 0.0396 | 0.9652 |
-| Greedy (failure/cost) | 0.4177 | 0.1657 | 0.0371 | 0.9729 |
+| Q-learning (linear) | 0.4297 | 0.1643 | 0.0382 | 0.9845 |
+| Greedy (failure/cost) | 0.4177 | 0.1657 | 0.0371 | 0.9816 |
 
-**Interpretation:** Greedy coverage/cost is clearly the strongest strategy on BDR and APFD. Q-learning beats greedy failure/cost on BDR but is on par with Random on BDR (0.456 vs. 0.460) and below it on APFD. Q-learning has the highest bugs/cost, but the margin is small. Failure history appears weakly predictive on this dataset, but we have not tested that explanation.
+**Interpretation:** Greedy coverage/cost is clearly the strongest strategy on BDR and APFD. Q-learning does not beat Random on BDR (0.4297 vs. 0.4603) or APFD (0.1643 vs. 0.2275). Greedy coverage/cost leads on BDR and APFD, and also has the highest bugs/cost (0.0395). Q-learning has high coverage but is not the strongest overall strategy on this dataset.
 
 ### Budget sensitivity (synthetic, BDR)
 
 | Budget | Random | Greedy (coverage/cost) | Greedy (failure/cost) | Q-learning |
 |---|---:|---:|---:|---:|
-| 20% | 0.384 | 0.455 | **0.550** | 0.540 |
-| 35% | 0.604 | 0.609 | 0.710 | **0.721** |
-| 50% | 0.776 | 0.738 | 0.829 | **0.842** |
-| 65% | 0.841 | 0.848 | **0.902** | 0.891 |
-| 80% | 0.936 | **0.945** | 0.938 | 0.938 |
+| 20% | 0.384 | 0.455 | **0.550** | 0.542 |
+| 35% | 0.604 | 0.609 | **0.710** | 0.706 |
+| 50% | 0.776 | 0.738 | **0.829** | 0.812 |
+| 65% | 0.841 | 0.848 | **0.902** | 0.899 |
+| 80% | 0.936 | **0.945** | 0.938 | 0.943 |
 
-**Interpretation:** Q-learning is not uniformly better. It leads at 35% and 50% budgets, trails greedy failure/cost at 20% and 65%, and ties it at 80%, where all strategies converge.
+**Interpretation:** Q-learning is not uniformly better. Greedy failure/cost leads at 20%, 35%, 50%, and 65% budgets; greedy coverage/cost leads at 80%. Q-learning is close to the leading strategy at several budgets but does not lead at any of these budget settings.
 
 ### Reward-function ablation
 
 | Variant | BDR ↑ |
 |---|---:|
-| Balanced (w_b=3.0, w_c=0.8, w_e=0.2) | 0.8168 |
-| Bug-centric (w_b=5.0, w_c=0.0, w_e=0.0) | 0.8201 |
-| Coverage-centric (w_b=1.0, w_c=3.0, w_e=0.2) | 0.8208 |
+| Balanced (w_b=3.0, w_c=0.8, w_e=0.2) | 0.8124 |
+| Bug-centric (w_b=5.0, w_c=0.0, w_e=0.0) | 0.8010 |
+| Coverage-centric (w_b=1.0, w_c=3.0, w_e=0.2) | 0.8108 |
 
-**Interpretation:** All three variants land within about 0.004 BDR, so on this benchmark the result is insensitive to the reward weights. This is a real finding, not a bug. One possible reason is that the shaping term toward the failure-rate oracle dominates the learned policy, but this has not been tested.
+**Interpretation:** The BDR means range from 0.8010 to 0.8124 (about 1.14 percentage points). The balanced variant is highest in this run, but the differences are descriptive and do not establish statistical significance. The effect of the shaping term has not been isolated here.
 
 ### Agent ablation: linear vs. tabular Q-learning
 
@@ -89,8 +89,8 @@ Means over 60 held-out builds per variant.
 
 | Agent | BDR ↑ | APFD ↑ | Bugs/cost ↑ | Coverage |
 |---|---:|---:|---:|---:|
-| Linear Q-learning | 0.8201 | 0.4839 | 0.1330 | 0.9806 |
-| Tabular Q-learning (legacy) | 0.8021 | 0.4270 | 0.1288 | 0.9972 |
+| Linear Q-learning | 0.8124 | 0.4794 | 0.1311 | 0.9944 |
+| Tabular Q-learning (legacy) | 0.7880 | 0.4468 | 0.1263 | 0.9972 |
 
 **Interpretation:** The linear agent has higher mean BDR, APFD, and bugs/cost; the tabular agent has higher mean coverage. The tabular agent cannot transfer what it learns across builds, because an action index refers to a different test in each build. The linear agent scores tests by observable features that carry over between builds. Treat these as descriptive comparisons.
 
@@ -193,12 +193,12 @@ python -m pytest tests/ -v
 
 ## Main findings and limitations
 
-1. **Synthetic benchmark:** Q-learning's BDR and bugs/cost are slightly above greedy failure/cost; greedy is slightly better on APFD. The gap is small.
-2. **IOF/ROL:** Q-learning has the best BDR (+4.5 pp), APFD, and bugs/cost.
-3. **PaintControl:** Greedy coverage/cost is best by a wide margin; Q-learning does not beat Random on BDR or APFD.
-4. **Budget sensitivity:** No strategy wins at every budget.
-5. **Reward weights:** The three reward variants perform almost identically.
-6. **Agent ablation:** Linear function approximation beats the tabular agent on BDR and APFD.
+1. **Synthetic benchmark:** Q-learning has a marginally higher BDR; greedy failure/cost is better on APFD and marginally higher on bugs/cost.
+2. **IOF/ROL:** Q-learning has the best BDR (+4.7 percentage points), APFD, and bugs/cost.
+3. **PaintControl:** Greedy coverage/cost is best on BDR, APFD, and bugs/cost; Q-learning does not beat Random on BDR or APFD.
+4. **Budget sensitivity:** Greedy failure/cost leads at 20–65% budgets, while greedy coverage/cost leads at 80%; no single strategy wins at every budget.
+5. **Reward weights:** BDR ranges from 0.8010 to 0.8124 across the three reward variants; differences are descriptive.
+6. **Agent ablation:** Linear Q-learning has higher mean BDR, APFD, and bugs/cost; tabular Q-learning has slightly higher coverage.
 7. **Statistics:** All tables are descriptive means from a single configuration. Paired per-cycle comparisons or confidence intervals are needed before claiming significance.
 
 ## Datasets
