@@ -19,4 +19,6 @@ Thumbs.db
 # Results checkpoints and large downloads
 *.tar.gz
 *.zip
+data/*.csv
+!data/sample_*.json
 data/raw/

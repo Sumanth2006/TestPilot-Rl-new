@@ -9,7 +9,7 @@ import os
 import argparse
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from src.simulator import BuildGenerator, RealWorldCIAdapter, SoftwareBuild
 from src.environment import TestingEnvironment
