@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TestPilot-RL Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">&#9654;</span> TestPilot-RL <small>Test prioritization dashboard</small></div>
+  <nav id="tabs">
+    <button class="tab active" data-tab="results">Results</button>
+    <button class="tab" data-tab="ablations">Ablations</button>
+    <button class="tab" data-tab="training">Training</button>
+    <button class="tab" data-tab="figures">Figures</button>
+    <button class="tab" data-tab="upload">Upload &amp; Evaluate</button>
+  </nav>
+</header>
+
+<main>
+  <div id="banner" class="banner hidden"></div>
+
+  <!-- RESULTS -->
+  <section id="tab-results" class="panel active">
+    <div class="toolbar">
+      <label>Dataset
+        <select id="datasetSelect">
+          <option value="synthetic">Synthetic (held-out builds)</option>
+          <option value="paintcontrol">Real-world: PaintControl</option>
+          <option value="iofrol">Real-world: IOF/ROL</option>
+        </select>
+      </label>
+      <label>Metric
+        <select id="metricSelect">
+          <option value="napfd">NAPFD</option>
+          <option value="apfd">APFD</option>
+          <option value="bug_detection_rate">Bug detection rate</option>
+          <option value="bugs_per_cost_unit">Bugs per cost unit</option>
+          <option value="coverage_rate">Coverage rate</option>
+          <option value="unique_bugs_detected">Unique bugs detected</option>
+        </select>
+      </label>
+    </div>
+    <div id="kpis" class="kpis"></div>
+    <div class="grid2">
+      <div class="card"><h3>Strategy comparison <span class="hint">mean &plusmn; 95% CI</span></h3><div class="chartbox"><canvas id="cmpChart"></canvas></div></div>
+      <div class="card"><h3>Per-build / per-cycle trend <span class="hint">avg across seeds</span></h3>
+        <div class="chips" id="strategyChips"></div>
+        <div class="chartbox"><canvas id="trendChart"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Summary table</h3><div class="tablewrap"><table id="summaryTable"></table></div></div>
+    <div class="card"><h3>Paired comparison <span class="hint">Dueling DQN vs. each baseline</span></h3><div class="tablewrap"><table id="pairedTable"></table></div></div>
+  </section>
+
+  <!-- ABLATIONS -->
+  <section id="tab-ablations" class="panel">
+    <div class="card"><h3>Budget sensitivity <span class="hint">NAPFD vs. time budget ratio</span></h3>
+      <div class="toolbar"><label>Metric
+        <select id="budgetMetric"><option value="napfd">NAPFD</option><option value="bug_detection_rate">Bug detection rate</option><option value="apfd">APFD</option></select></label></div>
+      <div class="chartbox tall"><canvas id="budgetChart"></canvas></div></div>
+    <div class="grid2">
+      <div class="card"><h3>Reward ablation</h3><div class="chartbox"><canvas id="rewardChart"></canvas></div></div>
+      <div class="card"><h3>State-feature ablation</h3><div class="chartbox"><canvas id="stateChart"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Agent ablation</h3><div class="chartbox"><canvas id="agentChart"></canvas></div></div>
+  </section>
+
+  <!-- TRAINING -->
+  <section id="tab-training" class="panel">
+    <div class="card"><h3>Training curves <span class="hint">moving average across seeds</span></h3>
+      <div class="toolbar">
+        <label>Series
+          <select id="trainMetric"><option value="reward">Episode reward</option><option value="bug_detection_rate">Bug detection rate</option><option value="epsilon">Epsilon</option><option value="mean_td_error">Mean TD error</option></select></label>
+        <label>Smoothing window <input type="range" id="trainWindow" min="1" max="50" value="15"> <span id="trainWindowVal">15</span></label>
+      </div>
+      <div class="chartbox tall"><canvas id="trainChart"></canvas></div></div>
+  </section>
+
+  <!-- FIGURES -->
+  <section id="tab-figures" class="panel"><div id="figureGrid" class="figgrid"></div></section>
+
+  <!-- UPLOAD -->
+  <section id="tab-upload" class="panel">
+    <div class="card">
+      <h3>Evaluate models on a new dataset</h3>
+      <p class="muted">Upload a CI log CSV in the RETECS format (semicolon-separated). Required columns:
+        <code>Id;Name;Duration;CalcPrio;LastRun;LastResults;Verdict;Cycle</code></p>
+      <div id="drop" class="drop" tabindex="0">
+        <input type="file" id="fileInput" accept=".csv,.txt" hidden>
+        <div><strong>Drop a CSV here</strong> or click to browse</div>
+        <div id="fileName" class="muted">No file selected</div>
+      </div>
+      <div id="preview" class="preview hidden"></div>
+      <div class="toolbar opts">
+        <label>Time budget ratio <input type="number" id="optBudget" value="0.45" min="0.05" max="1" step="0.05"></label>
+        <label>Train split <input type="number" id="optSplit" value="0.70" min="0.3" max="0.9" step="0.05"></label>
+        <label>Training episodes <input type="number" id="optEpisodes" value="400" min="50" max="2000" step="50"></label>
+        <label>Mode
+          <select id="optMode">
+            <option value="pretrained">Use pretrained models (fast)</option>
+            <option value="retrain">Retrain on this dataset (slow)</option>
+          </select></label>
+        <button id="runBtn" class="primary" disabled>Run evaluation</button>
+      </div>
+      <div id="progress" class="progress hidden"><div class="bar"><div id="barFill"></div></div><span id="progressText">Running…</span></div>
+    </div>
+
+    <div id="uploadResults" class="hidden">
+      <div id="uKpis" class="kpis"></div>
+      <div class="toolbar"><label>Metric
+        <select id="uMetric">
+          <option value="napfd">NAPFD</option><option value="apfd">APFD</option>
+          <option value="bug_detection_rate">Bug detection rate</option><option value="bugs_per_cost_unit">Bugs per cost unit</option>
+        </select></label>
+        <button id="dlBtn">Download results CSV</button></div>
+      <div class="grid2">
+        <div class="card"><h3>Strategy comparison</h3><div class="chartbox"><canvas id="uCmpChart"></canvas></div></div>
+        <div class="card"><h3>Per-cycle trend</h3><div class="chartbox"><canvas id="uTrendChart"></canvas></div></div>
+      </div>
+      <div class="card"><h3>Summary table</h3><div class="tablewrap"><table id="uTable"></table></div></div>
+    </div>
+  </section>
+</main>
+
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/papaparse.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
