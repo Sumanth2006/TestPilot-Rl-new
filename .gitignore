@@ -19,8 +19,6 @@ Thumbs.db
 # Results checkpoints and large downloads
 *.tar.gz
 *.zip
-data/*.csv
-data/raw/
 
 # ad-hoc train/evaluate runs
 results/scratch/
