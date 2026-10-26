@@ -1,0 +1,6 @@
+reference,compared_against,num_paired_builds,paired_bdr_diff_mean,paired_bdr_diff_ci95,paired_apfd_diff_mean,paired_apfd_diff_ci95,paired_napfd_diff_mean,paired_napfd_diff_ci95,builds_won,builds_tied,builds_lost
+Q-Learning,Random,63,0.2701,0.0598,0.2313,0.0586,0.2296,0.0582,53,6,4
+Q-Learning,Greedy (Coverage/Cost),63,0.2273,0.0719,0.2051,0.0603,0.2045,0.0601,45,11,7
+Q-Learning,Greedy (Failure/Cost),63,0.0432,0.0297,0.0399,0.0228,0.0395,0.0226,25,25,13
+Q-Learning,Greedy (Recency/Cost),63,0.0301,0.0301,0.028,0.0219,0.0277,0.0215,18,31,14
+Q-Learning,Dueling DQN (Online RL),63,-0.0013,0.0116,-0.0012,0.0081,-0.0013,0.0079,19,34,10
