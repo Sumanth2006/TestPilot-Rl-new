@@ -25,9 +25,9 @@ class TestingEnvironment:
     def __init__(
         self,
         build: Optional[SoftwareBuild] = None,
-        w_b: float = 2.5,
+        w_b: float = 3.0,
         w_c: float = 0.8,
-        w_e: float = 0.3,
+        w_e: float = 0.25,
         budget_bins: int = 5,
         coverage_bins: int = 5,
         history_bins: int = 3,
@@ -42,6 +42,8 @@ class TestingEnvironment:
 
         # Episode state variables
         self.executed_tests: Set[int] = set()
+        self.failed_executed_tests: Set[int] = set()
+        self.passed_executed_tests: Set[int] = set()
         self.discovered_bugs: Set[int] = set()
         self.covered_features: Set[int] = set()
         self.remaining_budget: float = 0.0
@@ -49,6 +51,7 @@ class TestingEnvironment:
         self.total_cost_spent: float = 0.0
         self.recent_outcomes: List[int] = []  # 1 for bug found, 0 otherwise
         self.step_count: int = 0
+        self._cached_legal_actions: Optional[List[int]] = None
 
         if build is not None:
             self.reset(build)
@@ -56,6 +59,7 @@ class TestingEnvironment:
     def set_build(self, build: SoftwareBuild):
         """Set a new build scenario for the environment."""
         self.build = build
+        self._cached_legal_actions = None
 
     def reset(self, build: Optional[SoftwareBuild] = None) -> Tuple[Tuple[int, int, int], Dict[str, Any]]:
         """
@@ -71,6 +75,8 @@ class TestingEnvironment:
             raise ValueError("No SoftwareBuild provided to environment.")
 
         self.executed_tests = set()
+        self.failed_executed_tests = set()
+        self.passed_executed_tests = set()
         self.discovered_bugs = set()
         self.covered_features = set()
         self.total_budget = float(self.build.budget)
@@ -78,6 +84,7 @@ class TestingEnvironment:
         self.total_cost_spent = 0.0
         self.recent_outcomes = []
         self.step_count = 0
+        self._cached_legal_actions = None
 
         state = self.get_discrete_state()
         info = self._get_info()
@@ -92,11 +99,14 @@ class TestingEnvironment:
         if self.build is None:
             return []
 
-        legal = []
-        for t in self.build.test_cases:
-            if t not in self.executed_tests:
-                if self.build.costs[t] <= round(self.remaining_budget, 4):
-                    legal.append(t)
+        if self._cached_legal_actions is not None:
+            return self._cached_legal_actions
+
+        rem = self.remaining_budget + 1e-4
+        costs = self.build.costs
+        executed = self.executed_tests
+        legal = [t for t in self.build.test_cases if t not in executed and costs[t] <= rem]
+        self._cached_legal_actions = legal
         return legal
 
     def get_legal_action_mask(self) -> np.ndarray:
@@ -152,7 +162,6 @@ class TestingEnvironment:
         num_tests = max(1, self.build.num_tests) if self.build else 1
         b_ratio = max(0.0, self.remaining_budget / max(1e-5, self.total_budget))
         c_ratio = len(self.covered_features) / total_feats
-        # Approximate normalization for bugs found
         bugs_norm = len(self.discovered_bugs) / max(1.0, num_tests * 0.3)
         exec_ratio = len(self.executed_tests) / num_tests
         last_found = float(self.recent_outcomes[-1]) if self.recent_outcomes else 0.0
@@ -166,7 +175,7 @@ class TestingEnvironment:
         Executes a test case action.
         Returns:
             next_state: compact discrete tuple
-            reward: scalar reward according to objective
+            reward: scalar reward according to cost-aware & early-detection objective
             terminated: True if episode complete (budget depleted / no legal actions)
             truncated: False (standard termination)
             info: comprehensive step and episode metrics
@@ -182,16 +191,25 @@ class TestingEnvironment:
                 f"Already executed: {action in self.executed_tests}"
             )
 
-        cost = self.build.costs[action]
+        cost = float(self.build.costs[action])
+        pre_step_budget_ratio = self.remaining_budget / max(1.0, self.total_budget)
+
         self.remaining_budget = max(0.0, round(self.remaining_budget - cost, 4))
         self.total_cost_spent += cost
         self.executed_tests.add(action)
         self.step_count += 1
+        self._cached_legal_actions = None
 
         # Query simulator ground truth for newly discovered bugs
         revealed_bugs = self.build.bug_detection_map.get(action, set())
         new_bugs = revealed_bugs - self.discovered_bugs
         self.discovered_bugs.update(new_bugs)
+
+        # Track whether this executed test failed or passed (observable after execution)
+        if len(revealed_bugs) > 0:
+            self.failed_executed_tests.add(action)
+        else:
+            self.passed_executed_tests.add(action)
 
         # Query simulator ground truth for newly covered features
         test_feats = self.build.coverage_map.get(action, set())
@@ -202,11 +220,15 @@ class TestingEnvironment:
         num_new_bugs = len(new_bugs)
         self.recent_outcomes.append(1 if num_new_bugs > 0 else 0)
 
-        # Reward calculation: r_t = w_b * B_t + w_c * C_t - w_e * E_t
+        # Cost-aware & early-detection (APFD-aligned) reward formulation:
+        # Rewards discovering unique new bugs early in the budget and at low execution cost,
+        # while encouraging marginal feature coverage diversity.
         total_feats = max(1, self.build.total_features)
-        b_term = float(num_new_bugs)
-        c_term = float(len(new_features)) / total_feats
-        e_term = float(cost) / max(1.0, self.total_budget)
+        early_bonus = 1.0 + 0.5 * pre_step_budget_ratio
+        cost_efficiency_factor = 1.0 / max(0.5, np.sqrt(cost))
+        b_term = float(num_new_bugs) * early_bonus * (0.65 + 0.35 * cost_efficiency_factor)
+        c_term = (float(len(new_features)) / total_feats) * cost_efficiency_factor
+        e_term = cost / max(1.0, self.total_budget)
 
         reward = (self.w_b * b_term) + (self.w_c * c_term) - (self.w_e * e_term)
 
